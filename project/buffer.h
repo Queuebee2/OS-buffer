@@ -111,7 +111,7 @@ int bufferReturnRemoved(){
     log_lock.lock();
     int msg_ind = buffer_log.size();
     buffer_log.push_back("");
-    log_lock.lock();
+    log_lock.unlock();
     // * * CRITICAL SECTION CURRENT_IDX * *
     if(current_idx > 0)
     { 
@@ -149,7 +149,7 @@ void bufferRemove(){
     log_lock.lock();
     int msg_ind = buffer_log.size();
     buffer_log.push_back("");
-    log_lock.lock();
+    log_lock.unlock();
     // * * CRITICAL SECTION CURRENT_IDX * *
     if(current_idx > 0)
     { 
@@ -158,9 +158,8 @@ void bufferRemove(){
         current_idx_lock.unlock();
    
         buffer_lock.lock();
-
-         
         // * * CRITICAL SECTION BUFFER * *
+
         int removed_element = my_buffer.back(); 
         my_buffer.pop_back();
         // * * END CRITICAL SECTION BUFFER * *
