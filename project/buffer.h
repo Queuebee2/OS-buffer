@@ -60,7 +60,6 @@ void readLog(){
         cout << "log for operation " << i << " " << buffer_log.at(i) << endl;
     }
     log_lock.unlock();
-    cout << ' ';
     
 }
 
