@@ -175,6 +175,8 @@ int removeCompleteTest(){
     for (auto number : my_buffer){
         cout << number << endl;
     }
+
+    cout << "starting threads" <<endl;
     thread firstAdder(removeJob);
     thread secondAdder(removeJob);
     
@@ -226,30 +228,66 @@ int removeTooManyTest(){
 
 }
 
+/*
+This test starts two threads that each try and add 10 values to the buffer.
+We assume the threads are doing this concurrently if we encounter both
+values in the first half of the buffer.
+
+warning: it could also mean the threads were alternating (?!)
+
+This test mainly checks if 2 threads don't wait for eachother to complete
+their whole process. There IS A CHANCE THIS OCCURS THOUGH, thats why we repeat
+the experiment 100 times.
+*/
 int testConcurrentAdding(){
+
+    bool flag1;
+    bool flag2;
+    int TESTVALUE_1 = 1;
+    int TESTVALUE_2 = 2;
+
+    cout << "Running: " << YELLOW_COLOR << "testConcurrentAdding" << WHITE_COLOR << endl;
 
     for (size_t TEST_INDEX = 0; TEST_INDEX < 100; TEST_INDEX++)
     {   
         bufferReset();
+        setBound(20);
 
         // assert addJob tries to insert a value 10 times
-        thread firstAdder(addJob, 1);
-        thread secondAdder(addJob, 2);
+        thread firstAdder(addJob, TESTVALUE_1);
+        thread secondAdder(addJob, TESTVALUE_2);
 
         firstAdder.join();
         secondAdder.join();
 
-        int i = 1;
-        // check whether any two consecutive elements are not the same,
-        // this SHOULD mean the threads could write concurrently.
-        while (i < my_buffer.size()){
-            if (my_buffer[i-1] != my_buffer[i]){
-                return 0;
+        for (size_t i = 0; i < (1 + ((my_buffer.size() - 1) / 2)); i++)
+        {
+            if (my_buffer[i] == TESTVALUE_1){
+                flag1 = true;
+            }else if (my_buffer[i] == TESTVALUE_2){
+                flag2 = true;
             }
-            i++;
         }
 
+        // if we found both testvalues in the first half,
+        // we expect the threads had concurrent access.
+        // warning: it could also mean the threads were alternating (?!)
+        if (flag1 && flag2){
+            cout << "Write 2 values concurrently" << " ? ";
+            cout << GREEN_COLOR << "SUCCES" << WHITE_COLOR << endl; ;
+            return 0;
+        } else {
+            flag1 = false;
+            flag2 = false;
+        }
+    
     }
+
+    // if all 100 tests did not have any mixes of values 1 and 2 in the
+    // first half of the buffer, the concurrency test failed.
+    
+    cout << "Write 2 values concurrently" << " ? ";        
+    cout << RED_COLOR << "FAIL" << WHITE_COLOR << endl;
     return -1;
         
 }
