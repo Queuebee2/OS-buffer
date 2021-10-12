@@ -29,6 +29,24 @@ mutex current_idx_lock;
 vector<int> my_buffer;
 vector<string> buffer_log;
 
+int getBufferSize(){
+    buffer_lock.lock();
+    int size = my_buffer.size();
+    buffer_lock.unlock();
+    return size;
+}
+
+int getValueAt(int ind){
+    int res;
+    buffer_lock.lock();
+    if (ind >= my_buffer.size()) {
+        res = NULL;
+    } else { 
+        res = my_buffer.at(ind);
+    }
+    buffer_lock.unlock();
+    return res;
+}
 
 void bufferReset(){
     current_bound = DEFAULT_BOUND;
@@ -47,7 +65,7 @@ void writeLog(string msg, int position){
     // TODO READER WRITER PROBLEM.
     // waiting on log_lock
     log_lock.lock();
-    buffer_log[position]= msg;
+    buffer_log[position] = msg;
     log_lock.unlock();
 }
 
