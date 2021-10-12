@@ -20,6 +20,7 @@ const string GREEN_COLOR  = "\033[32m";
 const string YELLOW_COLOR = "\033[33m";
 
 
+
 using namespace std;
 
 void printbuffer(string msg = ""){
@@ -176,6 +177,7 @@ int addTest() {
     readLog();
 
     printbuffer("resulting buffer: ");
+    assertIntEqual(my_buffer.size(), 20, "buffer size is 20 as expected");
 
     return 0;
 }
