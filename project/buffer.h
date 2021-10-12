@@ -235,7 +235,7 @@ void setBound(int requestSize)
 
 /*
 Toggles the boundedness of the buffer. Changes the bound back
-to a previous bound value if
+to a previous bound value if the bound is already infinite.
 */
 void toggleBounds()
 {
