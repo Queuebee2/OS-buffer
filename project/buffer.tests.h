@@ -9,8 +9,14 @@
 #define DEBUGMODE 1
 #endif
 
-int MAX_BOUND_LIMIT = 100;
-int AMT_ACTIONS = 10;
+const int MAX_BOUND_LIMIT = 100;
+const int AMT_ACTIONS = 10;
+const string WHITE_COLOR  = "\033[37m";
+const string RED_COLOR    = "\033[31m";
+const string GREEN_COLOR  = "\033[32m";
+const string YELLOW_COLOR = "\033[33m";
+
+
 
 using namespace std;
 
@@ -18,10 +24,10 @@ int assertIntEqual(int val1, int val2, string msg){
     int r = 1;
     cout << msg << " ? ";
     if (val1 == val2){
-        cout << "SUCCES" ;
+        cout << GREEN_COLOR << "SUCCES" << WHITE_COLOR ;
         r = 0;
     } else {
-        cout << "FAIL";
+        cout << RED_COLOR << "FAIL" << WHITE_COLOR;
     }
     cout << endl;
     return r;
@@ -31,10 +37,10 @@ int assertStringEqual(string val1, string val2, string msg){
     int r = 1;
     cout << msg << " ? ";
     if ((val1.compare(val2)) == 0){
-        cout << "SUCCES" ;
+        cout << GREEN_COLOR << "SUCCES" << WHITE_COLOR ;
         r = 0;
     } else {
-        cout << "FAIL";
+        cout << RED_COLOR << "FAIL" << WHITE_COLOR;
     }
     cout << endl;
     return r;
@@ -135,6 +141,8 @@ void removeJob(){
 
 int addTest() {
 
+    cout << "Running: " << YELLOW_COLOR << "addTest" << WHITE_COLOR << endl;
+
     bufferReset();
 
     thread firstRemover(addJob, 1);
@@ -157,6 +165,8 @@ int addTest() {
 
 int removeCompleteTest(){
     
+    cout << "Running: " << YELLOW_COLOR << "removeCompleteTest" << WHITE_COLOR << endl;
+
     bufferReset();
 
     addJob(1);
@@ -186,6 +196,8 @@ int removeCompleteTest(){
 }
 
 int removeTooManyTest(){
+
+    cout << "Running: " << YELLOW_COLOR << "removeTooManyTest" << WHITE_COLOR << endl;
 
     bufferReset();
 
@@ -244,6 +256,8 @@ int testConcurrentAdding(){
 
 int addAndRemoveTest(){
       
+    cout << "Running: " << YELLOW_COLOR << "addAndRemoveTest" << WHITE_COLOR << endl;
+
     bufferReset();
 
     thread firstAdder(addJob,1);
@@ -274,6 +288,10 @@ void boundJob(int bound){
 }
 
 int testChangeBound(){
+
+    cout << "Running: " << YELLOW_COLOR << "testChangeBound" << WHITE_COLOR << endl;
+
+    bufferReset();
     thread firstBounder(boundJob,10);
     thread secondBounder(boundJob,20);
     thread thirdBounder(boundJob,5);
@@ -300,51 +318,36 @@ int changeBoundAdd(){
 
 int testToggleBounds(){
     
+    cout << "Running: " << YELLOW_COLOR << "testToggleBounds" << WHITE_COLOR << endl;
     
     bufferReset();
 
-    assertIntEqual(current_bound, UNBOUNDED, "Buffer is unbounded");
+    assertIntEqual(current_bound, UNBOUNDED, "Buffer is unbounded initially");
 
     bufferReset();
     toggleBounds();
+    assertIntEqual(current_bound, UNBOUNDED, "Buffer is unbounded after toggle (no previous)");
+
+    bufferReset();
+    setBound(10);
+    assertIntEqual(current_bound, 10, "Buffer set to 10");
+    toggleBounds();
+    assertIntEqual(current_bound, UNBOUNDED, "Buffer correctly toggled back to unbounded");
+    toggleBounds();
+    assertIntEqual(current_bound, 10, "Buffer correctly toggled to previous value (10)");
     
+    return 0;
 }
 
 
-// void task_random(){
-//     int actions = 0;
-//     while (actions < AMT_ACTIONS){
-//         actions ++;
-//         int task_num = (rand() % 5);
-//         int r = (rand() % 10);
-//         int s = (rand() % 1000) + 100;
-//         switch (task_num)
-//         {
-//         case 1
-//             bufferbufferAdd(r);
-//             break;
-//         case 2
-//             /* code */
-//             bufferRemove();
-//             break;
-//         case 3
-//             /* code */
-//             setBound(s);
-//             break;
-//         case 4
-//             /* code */
-//             toggleBounds();
-//             break;
-//         default:
-//             break;
-//         }
+int runAllTests(){
 
-//     }
-    
-// }
-
-// int test2(){
-
-    
-// }
+    addTest();
+    // removeCompleteTest(); // deadlocks ?
+    // removeTooManyTest();  // deadlocks ?
+    testConcurrentAdding();
+    testToggleBounds();
+    testChangeBound();
+    // addAndRemoveTest();   // deadlocks ?
+}
 
