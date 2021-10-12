@@ -6,7 +6,10 @@
 #include <vector>
 
 #ifndef DEBUGMODE
-#define DEBUGMODE 1
+#define DEBUGMODE 0
+#endif
+#ifndef DEBUG
+#define DEBUG(x)  do { if (DEBUGMODE>1) { std::cerr << "debug:: " << x << std::endl; } } while (0)
 #endif
 
 const int MAX_BOUND_LIMIT = 100;
@@ -17,8 +20,15 @@ const string GREEN_COLOR  = "\033[32m";
 const string YELLOW_COLOR = "\033[33m";
 
 
-
 using namespace std;
+
+void printbuffer(string msg = ""){
+    cout << msg << endl;
+    for (auto number : my_buffer){
+        cout << number << ", ";
+    } cout << endl;
+}
+
 
 int assertIntEqual(int val1, int val2, string msg){
     int r = 1;
@@ -126,18 +136,27 @@ int test1(){
 
 void addJob(int number){
     for (int i = 0; i < 10; i++){
-        cout << "adding an element: " << number << endl;
+        DEBUG("adding an element: " << number);
         bufferAdd(number);
     }
 }
 
 void removeJob(){
     for(int i = 0; i < 10; i++){
+        DEBUG("trying to remove element" << i);
         bufferRemove();
-        int removed = bufferReturnRemoved();
-        cout << "removed an element: " << removed << endl;;
     }
 }
+
+void removeWithGetJob(){
+    for(int i = 0; i < 10; i++){
+        DEBUG("trying to get element" << i);
+        int result = bufferReturnRemoved();
+        DEBUG("got " << result << " for element " << i << "successfully");
+    }
+}
+
+
 
 int addTest() {
 
@@ -156,11 +175,37 @@ int addTest() {
 
     readLog();
 
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+    printbuffer("resulting buffer: ");
 
     return 0;
+}
+
+
+int removeCompleteWithGetTest(){
+
+    cout << "Running: " << YELLOW_COLOR << "removeWithGetTest" << WHITE_COLOR << endl;
+
+    bufferReset();
+
+    addJob(1);
+    addJob(42);
+    cout << "current index for buffer: " << current_idx << endl;
+    printbuffer("starting buffer: ");
+    thread firstRemover(removeWithGetJob);
+    thread secondRemover(removeWithGetJob);
+    
+    firstRemover.join();
+    secondRemover.join();
+
+    cout << "Reading log" << endl;
+    readLog();
+
+    printbuffer("resulting buffer: ");
+    assertIntEqual(my_buffer.size(), 0, "resulting buffer is empty");
+    
+    return 0;
+
+
 }
 
 int removeCompleteTest(){
@@ -170,27 +215,24 @@ int removeCompleteTest(){
     bufferReset();
 
     addJob(1);
-    addJob(2);      
-    cout << "starting buffer: " << endl;
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+    addJob(2);
+
+    cout << "current index for buffer: " << current_idx << endl;
+    printbuffer("starting buffer: ");
 
     cout << "starting threads" <<endl;
-    thread firstAdder(removeJob);
-    thread secondAdder(removeJob);
+    thread firstRemover(removeJob);
+    thread secondRemover(removeJob);
     
+    firstRemover.join();
+    secondRemover.join();
+
     
-    firstAdder.join();
-    secondAdder.join();
+    printbuffer("resulting buffer: ");
 
     cout << "Reading log" << endl;
-
     readLog();
-    cout << "resulting buffer: " << endl;
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+
 
     return 0;
 
@@ -205,10 +247,8 @@ int removeTooManyTest(){
 
     addJob(1);
       
-    cout << "starting buffer: " << endl;
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+    printbuffer("starting buffer: ");
+
     thread firstAdder(removeJob);
     thread secondAdder(removeJob);
     
@@ -219,10 +259,7 @@ int removeTooManyTest(){
     cout << "Reading log" << endl;
 
     readLog();
-    cout << "resulting buffer: " << endl;
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+    printbuffer("resulting buffer: ");
 
     return 0;
 
@@ -247,6 +284,8 @@ int testConcurrentAdding(){
     int TESTVALUE_2 = 2;
 
     cout << "Running: " << YELLOW_COLOR << "testConcurrentAdding" << WHITE_COLOR << endl;
+
+
 
     for (size_t TEST_INDEX = 0; TEST_INDEX < 100; TEST_INDEX++)
     {   
@@ -311,10 +350,7 @@ int addAndRemoveTest(){
     cout << "Reading log" << endl;
 
     readLog();
-    cout << "resulting buffer: " << endl;
-    for (auto number : my_buffer){
-        cout << number << endl;
-    }
+    printbuffer("resulting buffer: ");
 
     return 0;
 
@@ -330,6 +366,8 @@ int testChangeBound(){
     cout << "Running: " << YELLOW_COLOR << "testChangeBound" << WHITE_COLOR << endl;
 
     bufferReset();
+
+    // todo put jobs in loop so they actually compete
     thread firstBounder(boundJob,10);
     thread secondBounder(boundJob,20);
     thread thirdBounder(boundJob,5);
@@ -381,11 +419,13 @@ int testToggleBounds(){
 int runAllTests(){
 
     addTest();
-    // removeCompleteTest(); // deadlocks ?
-    // removeTooManyTest();  // deadlocks ?
+    removeCompleteTest(); // deadlocks ?
+    removeTooManyTest();  // deadlocks ?
     testConcurrentAdding();
     testToggleBounds();
     testChangeBound();
-    // addAndRemoveTest();   // deadlocks ?
+    removeCompleteWithGetTest();
+    addAndRemoveTest();   // segmentation fault?
+    
 }
 
