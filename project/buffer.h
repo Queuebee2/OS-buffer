@@ -16,7 +16,7 @@ const int DEFAULT_BOUND = UNBOUNDED;
 
 int current_bound = DEFAULT_BOUND; // initialise as unbounded buffer
 int prev_bound    = DEFAULT_BOUND; // initialise
-int current_idx   =  0; // current index is where we can write the next element
+int current_idx   =  0;            // current index is where we can write the next element
 
 mutex buffer_lock;
 // - my_buffer vector
@@ -60,7 +60,7 @@ void readLog(){
         cout << "log for operation " << i << " " << buffer_log.at(i) << endl;
     }
     log_lock.unlock();
-    
+    cout << ' ';
     
 }
 
