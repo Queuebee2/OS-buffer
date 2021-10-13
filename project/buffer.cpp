@@ -6,6 +6,8 @@
 
 using namespace std;
 
+
+
 // #define DEBUGMODE 0
 // #define DEBUGs(x) do { if (DEBUGMODE>0) { std::cerr << x << std::endl; } } while (0)
 // #define DEBUG(x)  do { if (DEBUGMODE>1) { std::cerr << "debug:: " << x << std::endl; } } while (0)
@@ -29,17 +31,80 @@ mutex current_idx_lock;
 vector<int> my_buffer;
 vector<string> buffer_log;
 
+int getBufferSize(){
+    buffer_lock.lock();
+    int size = my_buffer.size();
+    buffer_lock.unlock();
+    return size;
+}
+
+int getLogSize(){
+    log_lock.lock();
+    int size = buffer_log.size();
+    log_lock.unlock();
+    return size;
+}
+
+int getCurrentBound(){
+    buffer_lock.lock();
+    int bound = current_bound;
+    buffer_lock.unlock();
+    return bound;
+}
+
+int getCurrentIndex(){
+    current_idx_lock.lock();
+    int idx = current_idx;
+    current_idx_lock.unlock();
+    return idx;
+}
+
+int getPrevBound(){
+    buffer_lock.lock();
+    int bound = prev_bound;
+    buffer_lock.unlock();
+    return bound;
+}
+
+int getValueAt(int ind){
+    int res;
+    buffer_lock.lock();
+    if (ind >= my_buffer.size()) {
+        res = NULL;
+    } else { 
+        res = my_buffer.at(ind);
+    }
+    buffer_lock.unlock();
+    return res;
+}
+
+string readLogAt(int ind){
+    string res;
+    log_lock.lock();
+    if (ind >= buffer_log.size()){
+        res = "No log at " + to_string(ind);
+    } else {
+        res = buffer_log.at(ind);
+    }
+    log_lock.unlock();
+    return res;
+}
 
 void bufferReset(){
     current_bound = DEFAULT_BOUND;
     prev_bound    = DEFAULT_BOUND; 
-    current_idx   =  0;
+    current_idx   = 0;
 
+    // TODO ? LOCK things? how to
+    // be sure this is never called within a thread while
+    // other threads are trying to compete for resoures?
     buffer_lock.unlock();
     log_lock.unlock();
     current_idx_lock.unlock();
-
+    
     my_buffer.clear();
+
+    // TODO ? add something to buffer_log?
     buffer_log.clear();
 }
 
@@ -47,7 +112,7 @@ void writeLog(string msg, int position){
     // TODO READER WRITER PROBLEM.
     // waiting on log_lock
     log_lock.lock();
-    buffer_log[position]= msg;
+    buffer_log[position] = msg;
     log_lock.unlock();
 }
 
@@ -111,7 +176,7 @@ int bufferReturnRemoved(){
     log_lock.lock();
     int msg_ind = buffer_log.size();
     buffer_log.push_back("");
-    log_lock.lock();
+    log_lock.unlock();
     // * * CRITICAL SECTION CURRENT_IDX * *
     if(current_idx > 0)
     { 
@@ -149,7 +214,7 @@ void bufferRemove(){
     log_lock.lock();
     int msg_ind = buffer_log.size();
     buffer_log.push_back("");
-    log_lock.lock();
+    log_lock.unlock();
     // * * CRITICAL SECTION CURRENT_IDX * *
     if(current_idx > 0)
     { 
@@ -158,9 +223,8 @@ void bufferRemove(){
         current_idx_lock.unlock();
    
         buffer_lock.lock();
-
-         
         // * * CRITICAL SECTION BUFFER * *
+
         int removed_element = my_buffer.back(); 
         my_buffer.pop_back();
         // * * END CRITICAL SECTION BUFFER * *
