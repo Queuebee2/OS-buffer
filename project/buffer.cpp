@@ -6,6 +6,8 @@
 
 using namespace std;
 
+
+
 // #define DEBUGMODE 0
 // #define DEBUGs(x) do { if (DEBUGMODE>0) { std::cerr << x << std::endl; } } while (0)
 // #define DEBUG(x)  do { if (DEBUGMODE>1) { std::cerr << "debug:: " << x << std::endl; } } while (0)
@@ -36,6 +38,34 @@ int getBufferSize(){
     return size;
 }
 
+int getLogSize(){
+    log_lock.lock();
+    int size = buffer_log.size();
+    log_lock.unlock();
+    return size;
+}
+
+int getCurrentBound(){
+    buffer_lock.lock();
+    int bound = current_bound;
+    buffer_lock.unlock();
+    return bound;
+}
+
+int getCurrentIndex(){
+    current_idx_lock.lock();
+    int idx = current_idx;
+    current_idx_lock.unlock();
+    return idx;
+}
+
+int getPrevBound(){
+    buffer_lock.lock();
+    int bound = prev_bound;
+    buffer_lock.unlock();
+    return bound;
+}
+
 int getValueAt(int ind){
     int res;
     buffer_lock.lock();
@@ -48,16 +78,33 @@ int getValueAt(int ind){
     return res;
 }
 
+string readLogAt(int ind){
+    string res;
+    log_lock.lock();
+    if (ind >= buffer_log.size()){
+        res = "No log at " + to_string(ind);
+    } else {
+        res = buffer_log.at(ind);
+    }
+    log_lock.unlock();
+    return res;
+}
+
 void bufferReset(){
     current_bound = DEFAULT_BOUND;
     prev_bound    = DEFAULT_BOUND; 
-    current_idx   =  0;
+    current_idx   = 0;
 
+    // TODO ? LOCK things? how to
+    // be sure this is never called within a thread while
+    // other threads are trying to compete for resoures?
     buffer_lock.unlock();
     log_lock.unlock();
     current_idx_lock.unlock();
-
+    
     my_buffer.clear();
+
+    // TODO ? add something to buffer_log?
     buffer_log.clear();
 }
 
