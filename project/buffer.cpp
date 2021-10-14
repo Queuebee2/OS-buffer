@@ -6,8 +6,6 @@
 
 using namespace std;
 
-
-
 // #define DEBUGMODE 0
 // #define DEBUGs(x) do { if (DEBUGMODE>0) { std::cerr << x << std::endl; } } while (0)
 // #define DEBUG(x)  do { if (DEBUGMODE>1) { std::cerr << "debug:: " << x << std::endl; } } while (0)
@@ -17,8 +15,8 @@ const int UNBOUNDED = -1;
 const int DEFAULT_BOUND = UNBOUNDED;
 
 int current_bound = DEFAULT_BOUND; // initialise as unbounded buffer
-int prev_bound    = DEFAULT_BOUND; // initialise
-int current_idx   =  0;            // current index is where we can write the next element
+int prev_bound = DEFAULT_BOUND;    // initialise
+int current_idx = 0;               // current index is where we can write the next element
 
 mutex buffer_lock;
 // - my_buffer vector
@@ -31,69 +29,83 @@ mutex current_idx_lock;
 vector<int> my_buffer;
 vector<string> buffer_log;
 
-int getBufferSize(){
+int getBufferSize()
+{
     buffer_lock.lock();
     int size = my_buffer.size();
     buffer_lock.unlock();
     return size;
 }
 
-int getLogSize(){
+int getLogSize()
+{
     log_lock.lock();
     int size = buffer_log.size();
     log_lock.unlock();
     return size;
 }
 
-int getCurrentBound(){
+int getCurrentBound()
+{
     buffer_lock.lock();
     int bound = current_bound;
     buffer_lock.unlock();
     return bound;
 }
 
-int getCurrentIndex(){
+int getCurrentIndex()
+{
     current_idx_lock.lock();
     int idx = current_idx;
     current_idx_lock.unlock();
     return idx;
 }
 
-int getPrevBound(){
+int getPrevBound()
+{
     buffer_lock.lock();
     int bound = prev_bound;
     buffer_lock.unlock();
     return bound;
 }
 
-int getValueAt(int ind){
+int getValueAt(int ind)
+{
     int res;
     buffer_lock.lock();
-    if (ind >= my_buffer.size()) {
+    if (ind >= my_buffer.size())
+    {
         res = NULL;
-    } else { 
+    }
+    else
+    {
         res = my_buffer.at(ind);
     }
     buffer_lock.unlock();
     return res;
 }
 
-string readLogAt(int ind){
+string readLogAt(int ind)
+{
     string res;
     log_lock.lock();
-    if (ind >= buffer_log.size()){
+    if (ind >= buffer_log.size())
+    {
         res = "No log at " + to_string(ind);
-    } else {
+    }
+    else
+    {
         res = buffer_log.at(ind);
     }
     log_lock.unlock();
     return res;
 }
 
-void bufferReset(){
+void bufferReset()
+{
     current_bound = DEFAULT_BOUND;
-    prev_bound    = DEFAULT_BOUND; 
-    current_idx   = 0;
+    prev_bound = DEFAULT_BOUND;
+    current_idx = 0;
 
     // TODO ? LOCK things? how to
     // be sure this is never called within a thread while
@@ -101,200 +113,139 @@ void bufferReset(){
     buffer_lock.unlock();
     log_lock.unlock();
     current_idx_lock.unlock();
-    
+
     my_buffer.clear();
 
     // TODO ? add something to buffer_log?
     buffer_log.clear();
 }
 
-void writeLog(string msg, int position){
-    // TODO READER WRITER PROBLEM.
-    // waiting on log_lock
+void writeLog(string msg)
+{
     log_lock.lock();
-    buffer_log[position] = msg;
+    // * *  CRITICAL SECTION LOG **
+    buffer_log.push_back(msg);
+    // * * END CRITICAL SECTION LOG **
     log_lock.unlock();
 }
 
-void readLog(){
-    
+void readLog()
+{
     log_lock.lock();
-    
-    for (int i = 0; i < buffer_log.size() ; i ++)
+    // * * CRITICAL SECTION LOG **
+    for (int i = 0; i < buffer_log.size(); i++)
     {
         cout << "log for operation " << i << " " << buffer_log.at(i) << endl;
     }
+    // * * END CRITICAL SECTION LOG **
     log_lock.unlock();
-    
 }
-
 
 void bufferAdd(int addition)
 {
-    string msg;
-
-    current_idx_lock.lock();
     buffer_lock.lock();
-
-    // get the msg index for current operation
-    log_lock.lock();
-    int msg_ind = buffer_log.size();
-    buffer_log.push_back("");
-    log_lock.unlock();
-
-     // * * CRITICAL SECTION BUFFER, CURRENT_IDX * *
-    if (current_bound == UNBOUNDED || current_idx < current_bound) 
+    // * * CRITICAL SECTION BUFFER* *
+    if (current_bound == UNBOUNDED || my_buffer.size() < current_bound)
     {
-        current_idx++;
-        // * * END CRITICAL SECTION CURRENT_IDX * *
-        current_idx_lock.unlock();
-
         my_buffer.push_back(addition);
+        string msg = "added element " + to_string(addition) + " to buffer succesfully";
+        writeLog(msg);
         // * * END CRITICAL SECTION BUFFER * *
         buffer_lock.unlock();
-
-        msg = "added element " + to_string(addition) + " to buffer succesfully";
-    } else 
-    {
-        // * * END CRITICAL SECTION BUFFER, CURRENT_IDX * *
-        current_idx_lock.unlock();
-        buffer_lock.unlock();
-        msg = "failed adding element " + to_string(addition) +". Buffer out of bound";
     }
-
-    writeLog(msg, msg_ind);
+    else
+    {
+        string msg = "failed adding element " + to_string(addition) + ". Buffer out of bound";
+        writeLog(msg);
+        // * * END CRITICAL SECTION BUFFER **
+        buffer_lock.unlock();
+    }
 }
 
-// TODO: int bufferGet()... 
-
-int bufferReturnRemoved(){
-    string msg;
+int bufferReturnRemoved()
+{
+    buffer_lock.lock();
+    // * * CRITICAL SECTION BUFFER * *
     int removed_element;
-
-    current_idx_lock.lock();
-    // get the msg index for current operation
-    log_lock.lock();
-    int msg_ind = buffer_log.size();
-    buffer_log.push_back("");
-    log_lock.unlock();
-    // * * CRITICAL SECTION CURRENT_IDX * *
-    if(current_idx > 0)
-    { 
-        current_idx--;
-        // * * END CRITICAL SECTION CURRENT_IDX * *
-        current_idx_lock.unlock();
-   
-        buffer_lock.lock();
-        // * * CRITICAL SECTION BUFFER * *
-        removed_element = my_buffer.back(); 
+    if (my_buffer.size() > 0)
+    {
+        removed_element = my_buffer.back();
         my_buffer.pop_back();
+        string msg = "got and removed element " + to_string(removed_element) + " from buffer succesfully";
+        writeLog(msg);
         // * * END CRITICAL SECTION BUFFER * *
         buffer_lock.unlock();
-
-        msg = "got and removed element " + to_string(removed_element) + " from buffer succesfully";
     }
     else
     {
-        // * * END CRITICAL SECTION CURRENT_IDX * *
-        current_idx_lock.unlock();
-        msg = "failed getting element. Buffer empty. returned NULL";
-        removed_element = NULL; // RETURN if no value?
+        string msg = "failed getting element. Buffer empty. returned NULL";
+        removed_element = NULL; // RETURN if no value
+        writeLog(msg);
+        // * * END CRITICAL SECTION BUFFER * *
+        buffer_lock.unlock();
     }
-    
-    writeLog(msg,msg_ind);
     return removed_element;
-
 }
 
-void bufferRemove(){
-    string msg;
-
-    current_idx_lock.lock();
-    // get the msg index for current operation
-    log_lock.lock();
-    int msg_ind = buffer_log.size();
-    buffer_log.push_back("");
-    log_lock.unlock();
-    // * * CRITICAL SECTION CURRENT_IDX * *
-    if(current_idx > 0)
-    { 
-        current_idx--;
-        // * * END CRITICAL SECTION CURRENT_IDX * *
-        current_idx_lock.unlock();
-   
-        buffer_lock.lock();
-        // * * CRITICAL SECTION BUFFER * *
-
-        int removed_element = my_buffer.back(); 
+void bufferRemove()
+{
+    buffer_lock.lock();
+    // * * CRITICAL SECTION BUFFER * *
+    if (my_buffer.size() > 0)
+    {
+        int removed_element = my_buffer.back();
         my_buffer.pop_back();
+        string msg = "removed element " + to_string(removed_element) + " from buffer succesfully";
+        writeLog(msg);
         // * * END CRITICAL SECTION BUFFER * *
         buffer_lock.unlock();
-
-        msg = "removed element " + to_string(removed_element) + " from buffer succesfully";
     }
     else
     {
-        // * * END CRITICAL SECTION CURRENT_IDX * *
-        current_idx_lock.unlock();
-        msg = "failed removing element. Buffer empty";
+        string msg = "failed removing element. Buffer empty";
+        writeLog(msg);
+        // * * END CRITICAL SECTION BUFFER * *
+        buffer_lock.unlock();
     }
-    
-    writeLog(msg,msg_ind);
-
 }
-
 
 void setBound(int requestSize)
-{   string msg;
-    int msg_ind;
-
-    if(requestSize > UNBOUNDED)
-    { 
-
-        // * * CRITICAL SECTION CURRENT_IDX * *  
-        current_idx_lock.lock();
-        if (requestSize < current_idx)
+{
+    string msg;
+    // * * CRITICAL SECTION BUFFER * *
+    buffer_lock.lock();
+    if (requestSize > UNBOUNDED)
+    {
+        if (requestSize < my_buffer.size())
         {
-            current_idx = requestSize;
+            int changed_bound = current_bound;
+            my_buffer.resize(requestSize);
+            current_bound = requestSize;
+            string msg = "set bound from " + to_string(changed_bound) + " to " + to_string(requestSize) + " succesfully";
+            writeLog(msg);
+            // * * END CRITICAL SECTION BUFFER * *
+            buffer_lock.unlock();
         }
-        current_idx_lock.unlock();
-        // * * END CRITICAL SECTION CURRENT_IDX * *  
-        
-        // * *  CRITICAL SECTION BUFFER * *  
-        buffer_lock.lock();
-        // reserve sport in log
-         // get the msg index for current operation
-         log_lock.lock();
-         msg_ind = buffer_log.size();
-         buffer_log.push_back("");
-         log_lock.unlock();
-        int changed_bound = current_bound;     
-        current_bound = requestSize;
-        // * * END CRITICAL SECTION BUFFER * *  
-
-        buffer_lock.unlock();
-        msg = "set bound from " + to_string(changed_bound) + " to " + to_string(requestSize) + " succesfully";
+        else
+        {
+            int changed_bound = current_bound;
+            current_bound = requestSize;
+            string msg = "set bound from " + to_string(changed_bound) + " to " + to_string(requestSize) + " succesfully";
+            writeLog(msg);
+            // * *  END CRITICAL SECTION BUFFER * *
+            buffer_lock.unlock();
+        }
     }
-    
+
     else
-    {   
-        // * * CRITICAL SECTION BOUND * *  
-        buffer_lock.lock(); 
-         // get the msg index for current operation
-         log_lock.lock();
-         msg_ind = buffer_log.size();
-         buffer_log.push_back("");
-         log_lock.unlock();
+    {
         current_bound = requestSize;
-        // * * END CRITICAL SECTION BOUND * *  
+        string msg = "made buffer unbounded successfully ";
+        writeLog(msg);
+        // * * END CRITICAL SECTION BOUND * *
         buffer_lock.unlock();
-        msg = "made buffer unbounded successfully ";
     }
-
-
-    writeLog(msg, msg_ind);
 }
-
 
 /*
 Toggles the boundedness of the buffer. Changes the bound back
@@ -302,29 +253,23 @@ to a previous bound value if the bound is already infinite.
 */
 void toggleBounds()
 {
-    string msg;
-
-    buffer_lock.lock();
-    // get the msg index for current operation
-    log_lock.lock();
-    int msg_ind = buffer_log.size();
-    buffer_log.push_back("");
-    log_lock.unlock();
-    
-    // * * CRITICAL SECTION BUFFER * *  
-    if (current_bound == UNBOUNDED)
+    buffer_lock.lock(); 
+    // * * CRITICAL SECTION BUFFER * *
+    if (current_bound== UNBOUNDED)
     {
         current_bound = prev_bound;
-        // * * END CRITICAL SECTION BUFFER * *  
+        string msg = "toggled to bounded buffer (" + to_string(prev_bound) + " elements)";
+        writeLog(msg);
+        // * * END CRITICAL SECTION BUFFER * *
         buffer_lock.unlock();
-        msg = "toggled to bounded buffer (" + to_string(prev_bound) + " elements)";
-    } else 
+    }
+    else
     {
         prev_bound = current_bound;
         current_bound = UNBOUNDED;
-        // * * END CRITICAL SECTION BUFFER * *  
+        string msg = "toggled to unbounded buffer";
+        writeLog(msg);
+        // * * END CRITICAL SECTION BUFFER * *
         buffer_lock.unlock();
-        msg = "toggled to unbounded buffer";
     }
-    writeLog(msg, msg_ind);
 }
