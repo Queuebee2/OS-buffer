@@ -171,12 +171,12 @@ TEST(BufferBasic, automaticBoundRestrict){
     t5.join();
     
     // the last set bound should be equal or lower to the max of the bounds
-    bool bCondition = getCurrentBound() <= (max({TESTBOUND1, TESTBOUND2, TESTBOUND3}));
-    EXPECT_EQ(bCondition, true);
+    bool bBoundWithinBounds = getCurrentBound() <= (max({TESTBOUND1, TESTBOUND2, TESTBOUND3}));
+    EXPECT_EQ(bBoundWithinBounds, true);
 
     //assert whether there are no more elements than restricted by bound
-    bCondition = getCurrentIndex() < getCurrentBound();
-    EXPECT_EQ(bCondition, true);
+    bool bIndexWithinBounds = getCurrentIndex() < getCurrentBound();
+    EXPECT_EQ(bIndexWithinBounds, true);
 }
 
 TEST(BufferBasic, singleRemoveWithRetrieval){
@@ -214,7 +214,26 @@ TEST(Buffer, maxValueAdd){
     
 }
 
-TEST(Buffer, minValueAdd){
+TEST(Buffer, returnLastElementAfterBoundChange){
+    int TESTVAL1 = 100;
+    int TESTVAL2 = 200;
+    bufferReset();
+
+    bufferAdd(TESTVAL1);
+    bufferAdd(TESTVAL1);
+    bufferAdd(TESTVAL2);
+
+    setBound(2);
+
+    int r = bufferReturnRemoved();
+
+    EXPECT_EQ(r, TESTVAL1);
+
+    
+
+}
+
+TEST(Buffer, minValueAddition){
     bufferReset();
     bufferAdd(INT16_MIN);
     bufferAdd(INT32_MIN);
@@ -225,7 +244,7 @@ TEST(Buffer, minValueAdd){
 }
 
 
-TEST(Buffer, dualAddTest){
+TEST(Buffer, dualAddition){
 
     bufferReset();
     
@@ -240,7 +259,7 @@ TEST(Buffer, dualAddTest){
 
     }
 
-TEST(BufferConcurrency, dualConcurrentAddTest){
+TEST(BufferConcurrency, dualConcurrentAddition){
     bool flag1;
     bool flag2;
     bool testsuccess = false;
