@@ -174,14 +174,23 @@ TEST(BufferBasic, automaticBoundRestrict){
     t4.join();
     t5.join();
     
-    // the last set bound should be equal or lower to the max of the bounds
-    bool bBoundWithinBounds = getCurrentBound() <= (max({TESTBOUND1, TESTBOUND2, TESTBOUND3}));
-    EXPECT_EQ(bBoundWithinBounds, true);
 
-    //assert whether there are no more elements than restricted by bound
-    // deprecated when current_indx isnt used anymore
-    // bool bIndexWithinBounds = getCurrentIndex() < getCurrentBound(); 
-    // EXPECT_EQ(bIndexWithinBounds, true);
+    // check that the bufferBound is exactly one of the expected bound sizes
+    int expected_size[] = {TESTBOUND1, TESTBOUND2, TESTBOUND3};
+    bool bBoundIsOfExpectedSize = find(begin(expected_size), end(expected_size), getCurrentBound()) != end(expected_size); 
+    EXPECT_EQ(bBoundIsOfExpectedSize, true);
+
+    // check if the buffersize is at least lower than the max bound.
+    // bool bBufferSizeWithinBounds = getBufferSize() < getCurrentBound();
+    int bufferSize = getBufferSize();
+    int curr_bound = getCurrentBound();
+    EXPECT_TRUE(bufferSize <= curr_bound);
+
+    // expect amt_threads*amt_actions log entries
+    int logSize = getLogSize();
+    int expectedLogSize = AMT_ACTIONS*5;
+    EXPECT_TRUE(logSize == expectedLogSize);
+
 }
 
 TEST(BufferBasic, singleRemoveWithRetrieval){
@@ -192,7 +201,6 @@ TEST(BufferBasic, singleRemoveWithRetrieval){
     int r = bufferReturnRemoved();
     EXPECT_EQ(getBufferSize(), 0);
     EXPECT_EQ(r, TESTVAL);
-
 }
 
 TEST(Buffer, doubleAdd){
@@ -374,6 +382,16 @@ TEST(BufferConcurrency, removeTooMany){
     EXPECT_EQ(getBufferSize(), 0);
     EXPECT_EQ(getLogSize(), (AMT_ACTIONS*2) + 1);
     // todo EXPECT_EQ for some values in log to see if the fails are logged correctly
+
+    bool foundExpectedFailMsg = false;
+    for (int i = 0; i < getLogSize() ; i++){
+        if (readLogAt(i).compare("failed removing element. Buffer empty") == 0){
+            foundExpectedFailMsg = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundExpectedFailMsg);
+
 }
 
 TEST(BufferConcurrency, addAndRemove){
