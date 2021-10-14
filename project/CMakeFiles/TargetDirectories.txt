@@ -1,0 +1,3 @@
+/home/islootweg/assignment2/project/CMakeFiles/rebuild_cache.dir
+/home/islootweg/assignment2/project/CMakeFiles/edit_cache.dir
+/home/islootweg/assignment2/project/CMakeFiles/prime.dir

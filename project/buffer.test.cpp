@@ -127,8 +127,8 @@ TEST(BufferBasic, singleRemove){
 TEST(BufferBasic, automaticBoundChange){
     int TESTVAL1 = 100;
     int TESTVAL2 = 200;
-    int TESTBOUND1 = 20;
-    int TESTBOUND2 = 33;
+    int TESTBOUND1 = 200;
+    int TESTBOUND2 = 330;
     int TESTBOUND3 = 100;
 
     bufferReset();
@@ -145,7 +145,13 @@ TEST(BufferBasic, automaticBoundChange){
     t4.join();
     t5.join();
 
-    // TODO EXPECT_EQ...
+    // the last set bound should be equal or lower to the max of the bounds
+    bool bCondition = getCurrentBound() <= (max({TESTBOUND1, TESTBOUND2, TESTBOUND3}));
+    EXPECT_EQ(bCondition, true);
+
+    //assert whether there are no more elements than restricted by bound
+    bCondition = getCurrentIndex() < getCurrentBound();
+    EXPECT_EQ(bCondition, true);
     
 }
 
@@ -238,7 +244,7 @@ TEST(Buffer, dualAddTest){
     // expect the amount of actions per thread times the amount of threads
     EXPECT_EQ(getBufferSize(), AMT_ACTIONS*2);
 
-    }
+}
 
 TEST(BufferConcurrency, dualConcurrentAddTest){
     bool flag1;
@@ -304,7 +310,6 @@ TEST(BufferConcurrency, addAndRemoveEverything){
     t4.join();
 
     EXPECT_EQ(getBufferSize(), 0);
-
 } 
 
 
@@ -370,7 +375,6 @@ TEST(BufferConcurrency, addAndRemove){
     t4.join();
 
     EXPECT_EQ(getLogSize(), 4*AMT_ACTIONS);
-    // todo: write EXPECT_EQs for log
 
 }
 
