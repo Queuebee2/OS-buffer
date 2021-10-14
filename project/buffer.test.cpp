@@ -6,6 +6,8 @@
 
 using namespace std;
 
+// GTEST info message hack https://stackoverflow.com/a/48924764/6934388
+#define GTEST_COUT_INFO std::cerr << "\033[33m" << "[   INFO   ] " <<  "\033[37m"
 
 // declarations of methods you want to test (should match exactly)
 void bufferReset();
@@ -24,7 +26,7 @@ int getValueAt(int ind);
 int getCurrentBound();
 int getPrevBound();
 string readLogAt(int ind);
-int getCurrentIndex();
+// int getCurrentIndex(); deprecated
 
 const int UNBOUNDED = -1; // TODO how to just use the same value from buffer.cpp instead of reinitializing here?
 
@@ -67,6 +69,8 @@ void taskNoInputReturnInt(int  (*f)()){
 
 TEST(BufferBasic, bufferReset){
     // mess starting values
+    bufferReset(); // weird thing to do as this assumes it works correctly already.
+
     bufferAdd(10);
     toggleBounds();
 
@@ -84,7 +88,7 @@ TEST(BufferBasic, bufferInitialSize){
 
     bufferReset();
     EXPECT_EQ(0,getBufferSize());
-    EXPECT_EQ(0,getBufferSize());
+    EXPECT_EQ(0,getLogSize());
 
     }
 
@@ -154,7 +158,7 @@ TEST(BufferBasic, automaticBoundRestrict){
     int TESTVAL2 = 200;
     int TESTBOUND1 = 3;
     int TESTBOUND2 = 5;
-    int TESTBOUND3 = 5;
+    int TESTBOUND3 = 7;
 
     bufferReset();
 
@@ -175,8 +179,9 @@ TEST(BufferBasic, automaticBoundRestrict){
     EXPECT_EQ(bBoundWithinBounds, true);
 
     //assert whether there are no more elements than restricted by bound
-    bool bIndexWithinBounds = getCurrentIndex() < getCurrentBound();
-    EXPECT_EQ(bIndexWithinBounds, true);
+    // deprecated when current_indx isnt used anymore
+    // bool bIndexWithinBounds = getCurrentIndex() < getCurrentBound(); 
+    // EXPECT_EQ(bIndexWithinBounds, true);
 }
 
 TEST(BufferBasic, singleRemoveWithRetrieval){
@@ -262,15 +267,14 @@ TEST(Buffer, dualAddition){
 TEST(BufferConcurrency, dualConcurrentAddition){
     bool flag1;
     bool flag2;
-    bool testsuccess = false;
     int TESTVALUE_1 = 1;
     int TESTVALUE_2 = 2;
 
      for (size_t TEST_INDEX = 0; TEST_INDEX < AMT_TESTS; TEST_INDEX++)
     {   
-        if (testsuccess == true){
-            break;
-        }
+        // if (testsuccess == true){
+        //     break;
+        // }
         bufferReset();
         setBound(AMT_ACTIONS);
 
@@ -289,14 +293,14 @@ TEST(BufferConcurrency, dualConcurrentAddition){
             }
         }
         if (flag1 && flag2){
-            testsuccess = true;
+            return SUCCEED();
         } else {
             flag1 = false;
             flag2 = false;
         }
     }
-
-    EXPECT_EQ(testsuccess, true);
+    GTEST_COUT_INFO << "this test can fail by chance!" << endl;
+    FAIL();
 
 }
 

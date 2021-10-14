@@ -16,16 +16,15 @@ const int DEFAULT_BOUND = UNBOUNDED;
 
 int current_bound = DEFAULT_BOUND; // initialise as unbounded buffer
 int prev_bound = DEFAULT_BOUND;    // initialise
-int current_idx = 0;               // current index is where we can write the next element
+
 
 mutex buffer_lock;
 // - my_buffer vector
 // - current_bound
 // - prev_bound
 
-// mutex bound_lock -> merged with bound_lock
 mutex log_lock;
-mutex current_idx_lock;
+
 vector<int> my_buffer;
 vector<string> buffer_log;
 
@@ -51,14 +50,6 @@ int getCurrentBound()
     int bound = current_bound;
     buffer_lock.unlock();
     return bound;
-}
-
-int getCurrentIndex()
-{
-    current_idx_lock.lock();
-    int idx = current_idx;
-    current_idx_lock.unlock();
-    return idx;
 }
 
 int getPrevBound()
@@ -105,18 +96,14 @@ void bufferReset()
 {
     current_bound = DEFAULT_BOUND;
     prev_bound = DEFAULT_BOUND;
-    current_idx = 0;
 
     // TODO ? LOCK things? how to
     // be sure this is never called within a thread while
     // other threads are trying to compete for resoures?
     buffer_lock.unlock();
     log_lock.unlock();
-    current_idx_lock.unlock();
 
     my_buffer.clear();
-
-    // TODO ? add something to buffer_log?
     buffer_log.clear();
 }
 
